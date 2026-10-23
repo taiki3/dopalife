@@ -1,0 +1,1792 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04050c">
+<title>DOPALIFE</title>
+<style>
+  :root{
+    --cyan:#46f7ff;
+    --pink:#ff49e1;
+    --violet:#b46bff;
+    --lime:#adff4d;
+    --ink:#04050c;
+    --mono:"Cascadia Code","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+    --display:"Bahnschrift","Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    height:100%;
+    margin:0;
+    background:var(--ink);
+    color:#eaf6ff;
+    font-family:var(--display);
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+  body{ touch-action:manipulation; }
+  button{ font-family:inherit; }
+  body::before,
+  body::after{
+    content:"";
+    position:fixed;
+    left:0;
+    right:0;
+    z-index:4;
+    pointer-events:none;
+  }
+  body::before{
+    top:0;
+    height:190px;
+    background:linear-gradient(180deg,rgba(4,5,12,.82),rgba(4,5,12,.28) 55%,rgba(4,5,12,0));
+  }
+  body::after{
+    bottom:0;
+    height:170px;
+    background:linear-gradient(0deg,rgba(4,5,12,.86),rgba(4,5,12,.3) 55%,rgba(4,5,12,0));
+  }
+
+  #stage{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:block;
+    cursor:crosshair;
+    touch-action:none;
+  }
+
+  .hud{
+    position:fixed;
+    inset:0;
+    z-index:5;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:clamp(14px,2vw,28px);
+    pointer-events:none;
+  }
+
+  .topline{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.26em;
+    color:rgba(225,242,255,.82);
+    text-shadow:0 0 18px rgba(80,200,255,.35);
+    white-space:nowrap;
+  }
+  .brand i{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 12px var(--cyan),0 0 30px rgba(70,247,255,.5);
+    animation:blink 2.4s ease-in-out infinite;
+  }
+  .brand b{ font-weight:300; color:rgba(140,190,255,.5); }
+  @keyframes blink{
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:.35; transform:scale(.75); }
+  }
+
+  .stats{
+    display:flex;
+    gap:clamp(12px,2.4vw,26px);
+    font-family:var(--mono);
+    text-align:right;
+  }
+  .stat span{
+    display:block;
+    font-size:9px;
+    letter-spacing:.26em;
+    color:rgba(150,190,240,.45);
+  }
+  .stat b{
+    display:block;
+    margin-top:3px;
+    font-size:13px;
+    font-weight:600;
+    color:rgba(224,246,255,.92);
+    font-variant-numeric:tabular-nums;
+  }
+  .stat.best b{ color:var(--pink); text-shadow:0 0 12px rgba(255,73,225,.45); }
+
+  .score-wrap{
+    position:absolute;
+    top:clamp(66px,9vh,96px);
+    right:clamp(14px,2vw,28px);
+    text-align:right;
+    transform-origin:right center;
+    padding:10px 13px 12px;
+    border-radius:16px;
+    background:linear-gradient(180deg,rgba(7,11,26,.56),rgba(7,11,26,.14));
+    border:1px solid rgba(120,190,255,.09);
+    box-shadow:0 16px 44px rgba(0,0,0,.28);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+  }
+  .score-label{
+    font-family:var(--mono);
+    font-size:9px;
+    letter-spacing:.4em;
+    color:rgba(150,190,255,.5);
+  }
+  .score{
+    font-size:clamp(32px,5vw,58px);
+    font-weight:800;
+    line-height:1.04;
+    letter-spacing:.015em;
+    font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,#ffffff 6%,#8bf9ff 48%,#c06bff 78%,#ff5fe3 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    filter:drop-shadow(0 0 22px rgba(90,220,255,.3));
+    transform-origin:right center;
+    will-change:transform;
+  }
+  .combo{
+    margin-top:2px;
+    font-family:var(--mono);
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.18em;
+    color:var(--pink);
+    text-shadow:0 0 14px rgba(255,73,225,.8);
+    opacity:0;
+    transform:scale(1);
+    transform-origin:right center;
+    transition:opacity .2s ease;
+    will-change:transform;
+  }
+  .combo.show{ opacity:1; }
+  .combo-bar{
+    width:112px;
+    height:3px;
+    margin:7px 0 0 auto;
+    border-radius:3px;
+    background:rgba(255,73,225,.12);
+    overflow:hidden;
+  }
+  .combo-bar i{
+    display:block;
+    height:100%;
+    width:0;
+    border-radius:3px;
+    background:linear-gradient(90deg,var(--cyan),var(--pink));
+    box-shadow:0 0 10px rgba(255,73,225,.8);
+    transition:width .14s ease-out;
+  }
+
+  .milestone{
+    position:fixed;
+    left:50%;
+    top:25%;
+    z-index:8;
+    transform:translate(-50%,-50%);
+    font-size:clamp(44px,9vw,128px);
+    font-weight:900;
+    letter-spacing:.01em;
+    line-height:1;
+    white-space:nowrap;
+    background:linear-gradient(180deg,#ffffff 0%,#7bf8ff 42%,#c06bff 72%,#ff5fe3 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    filter:drop-shadow(0 0 34px rgba(110,225,255,.45));
+    opacity:0;
+    pointer-events:none;
+  }
+  .milestone.show{
+    animation:hype 1.25s cubic-bezier(.16,.84,.24,1) forwards;
+  }
+  @keyframes hype{
+    0%{ opacity:0; transform:translate(-50%,-50%) scale(.55) rotate(-4deg); }
+    14%{ opacity:1; transform:translate(-50%,-50%) scale(1.1) rotate(1.4deg); }
+    42%{ opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
+    80%{ opacity:1; }
+    100%{ opacity:0; transform:translate(-50%,-58%) scale(1.04); }
+  }
+
+  .paused-tag{
+    position:fixed;
+    left:50%;
+    top:50%;
+    z-index:6;
+    transform:translate(-50%,-50%);
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.58em;
+    padding:10px 16px 10px calc(16px + .58em);
+    border-radius:999px;
+    color:rgba(226,246,255,.85);
+    background:rgba(5,8,18,.74);
+    border:1px solid rgba(110,230,255,.26);
+    box-shadow:0 0 34px rgba(70,247,255,.16),inset 0 0 18px rgba(70,247,255,.05);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    opacity:0;
+    transition:opacity .25s ease;
+    pointer-events:none;
+    white-space:nowrap;
+  }
+  .paused-tag::before{
+    content:"";
+    display:inline-block;
+    width:8px;
+    height:9px;
+    margin-right:10px;
+    vertical-align:-1px;
+    background:linear-gradient(90deg,var(--cyan) 0 30%,transparent 30% 70%,var(--cyan) 70% 100%);
+    box-shadow:0 0 8px rgba(70,247,255,.7);
+    opacity:.8;
+  }
+  body.paused .paused-tag{ opacity:1; }
+
+  footer{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:11px;
+  }
+  .dock{
+    pointer-events:auto;
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:9px;
+    padding:10px 12px;
+    border-radius:18px;
+    background:linear-gradient(180deg,rgba(18,24,48,.8),rgba(7,9,20,.88));
+    border:1px solid rgba(120,190,255,.15);
+    box-shadow:0 22px 60px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  .btn{
+    appearance:none;
+    border:1px solid transparent;
+    background:rgba(255,255,255,.055);
+    color:#dff7ff;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    padding:10px 13px;
+    border-radius:10px;
+    cursor:pointer;
+    transition:background .16s ease,border-color .16s ease,box-shadow .16s ease,transform .1s ease,color .16s ease;
+    white-space:nowrap;
+  }
+  .btn:hover{
+    background:rgba(90,220,255,.14);
+    border-color:rgba(110,235,255,.38);
+    box-shadow:0 0 20px rgba(70,240,255,.16);
+    transform:translateY(-1px);
+  }
+  .btn:active{ transform:translateY(0) scale(.97); }
+  .btn.play{
+    background:linear-gradient(135deg,rgba(70,247,255,.24),rgba(180,80,255,.24));
+    border-color:rgba(120,230,255,.4);
+    box-shadow:0 0 24px rgba(70,247,255,.16),inset 0 0 16px rgba(70,247,255,.06);
+    min-width:74px;
+  }
+  .btn.off{ color:rgba(200,210,235,.4); }
+  .btn.off:hover{ box-shadow:none; border-color:rgba(255,255,255,.12); }
+
+  .speed{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:0 4px;
+    font-family:var(--mono);
+    font-size:9px;
+    letter-spacing:.16em;
+    color:rgba(165,200,240,.62);
+  }
+  .speed b{
+    min-width:20px;
+    font-weight:600;
+    color:rgba(215,245,255,.9);
+    font-variant-numeric:tabular-nums;
+  }
+  input[type=range]{
+    -webkit-appearance:none;
+    appearance:none;
+    width:clamp(70px,9vw,118px);
+    height:4px;
+    border-radius:3px;
+    background:linear-gradient(90deg,rgba(70,247,255,.75),rgba(255,73,225,.75));
+    outline:none;
+    cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:14px;height:14px;border-radius:50%;
+    background:#e9fdff;
+    border:1px solid rgba(70,247,255,.9);
+    box-shadow:0 0 14px rgba(70,247,255,.9);
+    cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:13px;height:13px;border-radius:50%;
+    background:#e9fdff;
+    border:1px solid rgba(70,247,255,.9);
+    box-shadow:0 0 14px rgba(70,247,255,.9);
+    cursor:pointer;
+  }
+
+  .hint{
+    font-family:var(--mono);
+    font-size:9px;
+    letter-spacing:.09em;
+    color:rgba(175,205,240,.52);
+    text-align:center;
+    padding:5px 12px;
+    border-radius:999px;
+    background:rgba(3,5,12,.46);
+    border:1px solid rgba(120,170,255,.07);
+    backdrop-filter:blur(4px);
+    -webkit-backdrop-filter:blur(4px);
+  }
+  .hint-short{ display:none; }
+
+  .start{
+    position:fixed;
+    inset:0;
+    z-index:30;
+    display:grid;
+    place-items:center;
+    overflow:hidden;
+    cursor:pointer;
+    background:
+      radial-gradient(circle at 50% 42%,rgba(26,16,60,.5),rgba(4,5,12,.97) 64%),
+      var(--ink);
+    transition:opacity .65s ease,visibility .65s ease;
+  }
+  .start.hidden{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+  }
+  .start::before,
+  .start::after{
+    content:"";
+    position:absolute;
+    width:70vmax;
+    height:70vmax;
+    border-radius:50%;
+    filter:blur(80px);
+    opacity:.55;
+    pointer-events:none;
+  }
+  .start::before{
+    top:-30vmax;
+    left:-22vmax;
+    background:radial-gradient(circle,rgba(70,247,255,.2),transparent 66%);
+    animation:drift1 16s ease-in-out infinite alternate;
+  }
+  .start::after{
+    bottom:-34vmax;
+    right:-26vmax;
+    background:radial-gradient(circle,rgba(255,63,220,.18),transparent 66%);
+    animation:drift2 20s ease-in-out infinite alternate;
+  }
+  @keyframes drift1{
+    to{ transform:translate(11vmax,9vmax) scale(1.18); }
+  }
+  @keyframes drift2{
+    to{ transform:translate(-9vmax,-7vmax) scale(1.14); }
+  }
+
+  .start-inner{
+    position:relative;
+    z-index:2;
+    text-align:center;
+    padding:24px;
+    max-width:min(92vw,860px);
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:9px;
+    letter-spacing:.5em;
+    padding-left:.5em;
+    color:rgba(150,205,255,.55);
+    margin-bottom:clamp(18px,3vh,30px);
+  }
+  .start h1{
+    margin:0;
+    font-size:clamp(54px,11.5vw,150px);
+    line-height:.83;
+    font-weight:800;
+    letter-spacing:-.02em;
+    animation:titleFloat 6s ease-in-out infinite;
+  }
+  .start h1 .fill{
+    display:block;
+    background:linear-gradient(180deg,#ffffff 6%,#7df8ff 46%,#b46bff 74%,#ff49e1 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    filter:drop-shadow(0 0 36px rgba(80,200,255,.35));
+  }
+  .start h1 .line{
+    display:block;
+    margin-top:.06em;
+    font-size:.58em;
+    letter-spacing:.2em;
+    padding-left:.2em;
+    color:transparent;
+    -webkit-text-stroke:2px rgba(140,240,255,.72);
+    text-shadow:0 0 34px rgba(70,247,255,.32);
+    font-weight:700;
+  }
+  @keyframes titleFloat{
+    0%,100%{ transform:translateY(0); }
+    50%{ transform:translateY(-7px); }
+  }
+  .start p{
+    margin:clamp(20px,3.6vh,34px) 0 0;
+    font-size:clamp(11px,1.4vw,13px);
+    letter-spacing:.22em;
+    color:rgba(205,225,255,.6);
+  }
+  .start-btn{
+    appearance:none;
+    margin-top:clamp(26px,4.2vh,42px);
+    padding:16px 48px;
+    border-radius:999px;
+    border:1px solid rgba(110,240,255,.5);
+    background:rgba(70,247,255,.07);
+    color:#ddfcff;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.34em;
+    padding-left:calc(48px + .34em);
+    cursor:pointer;
+    box-shadow:0 0 44px rgba(70,247,255,.22),inset 0 0 24px rgba(70,247,255,.07);
+    transition:transform .18s ease,box-shadow .18s ease,background .18s ease;
+  }
+  .start-btn:hover{
+    transform:scale(1.045);
+    background:rgba(70,247,255,.14);
+    box-shadow:0 0 64px rgba(70,247,255,.4),inset 0 0 28px rgba(70,247,255,.12);
+  }
+  .start-btn:active{ transform:scale(.985); }
+  .start .meta{
+    margin-top:22px;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.14em;
+    color:rgba(160,195,235,.4);
+    line-height:1.9;
+  }
+  .start .meta b{
+    color:var(--pink);
+    font-weight:600;
+    text-shadow:0 0 14px rgba(255,73,225,.5);
+  }
+
+  @media (max-width:760px){
+    .brand{ font-size:10px; letter-spacing:.18em; }
+    .stats{ gap:11px; }
+    .stat span{ font-size:8px; letter-spacing:.18em; }
+    .stat b{ font-size:11px; }
+    .score-wrap{ top:clamp(70px,10vh,96px); }
+    .combo{ font-size:9px; letter-spacing:.12em; }
+    .combo-bar{ width:84px; }
+    .dock{ gap:5px; padding:8px; border-radius:15px; }
+    .btn{ font-size:9px; padding:9px 8px; letter-spacing:.08em; }
+    .btn.play{ min-width:0; }
+    .speed{ font-size:8px; gap:5px; padding:0 2px; }
+    .speed span{ display:none; }
+    .speed b{ min-width:14px; }
+    input[type=range]{ width:56px; }
+    .hint{ font-size:8px; letter-spacing:.02em; padding:5px 10px; }
+    .hint-long{ display:none; }
+    .hint-short{ display:inline; }
+    footer{ gap:8px; }
+    .start .eyebrow{ font-size:8px; letter-spacing:.34em; }
+    .start h1 .line{ -webkit-text-stroke-width:1.5px; }
+  }
+  @media (max-height:520px){
+    .hint{ display:none; }
+    .score-wrap{ top:58px; }
+    .milestone{ top:32%; }
+  }
+</style>
+</head>
+<body>
+<canvas id="stage" aria-label="Conway's Game of Life"></canvas>
+
+<div class="hud">
+  <div class="topline">
+    <div class="brand"><i></i><span>DOPA<b>LIFE</b></span></div>
+    <div class="stats">
+      <div class="stat"><span>GEN</span><b id="gen">0</b></div>
+      <div class="stat"><span>POP</span><b id="pop">0</b></div>
+      <div class="stat best"><span>BEST</span><b id="best">0</b></div>
+    </div>
+  </div>
+
+  <div class="score-wrap">
+    <div class="score-label">SCORE</div>
+    <div class="score" id="score">0</div>
+    <div class="combo" id="combo">COMBO 0</div>
+    <div class="combo-bar"><i id="comboBar"></i></div>
+  </div>
+
+  <div class="milestone" id="milestone"></div>
+  <div class="paused-tag">PAUSED</div>
+
+  <footer>
+    <div class="dock">
+      <button class="btn play" id="btnPlay" type="button">PLAY</button>
+      <div class="speed">
+        <span>SPEED</span>
+        <input id="speed" type="range" min="4" max="40" step="1" value="14" aria-label="speed">
+        <b id="speedVal">14</b>
+      </div>
+      <button class="btn" id="btnRandom" type="button">RANDOM</button>
+      <button class="btn" id="btnClear" type="button">CLEAR</button>
+      <button class="btn" id="btnSound" type="button">SOUND ON</button>
+    </div>
+    <div class="hint">
+      <span class="hint-long">ドラッグで描く · 右クリック / Shift で消す · SPACE 一時停止 · R ランダム · C クリア</span>
+      <span class="hint-short">ドラッグで描く · SPACE 一時停止 · R ランダム · C クリア</span>
+    </div>
+  </footer>
+</div>
+
+<div class="start" id="start">
+  <div class="start-inner">
+    <div class="eyebrow">CONWAY'S GAME OF LIFE · REALTIME SYNTH</div>
+    <h1>
+      <span class="fill">DOPA</span>
+      <span class="line">LIFE</span>
+    </h1>
+    <p>細胞が生まれるたび、脳が震える。</p>
+    <button class="start-btn" id="btnStart" type="button">START</button>
+    <div class="meta">
+      BEST SCORE <b id="bestStart">0</b><br>
+      音が出ます · クリック / タップで開始
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const TAU = Math.PI * 2;
+  const $ = function(id){ return document.getElementById(id); };
+  const clamp = function(v,a,b){ return v < a ? a : (v > b ? b : v); };
+  const rand = function(a,b){ return a + Math.random() * (b - a); };
+  const fmt = function(n){ return Math.round(n).toLocaleString('en-US'); };
+
+  const canvas = $('stage');
+  const ctx = canvas.getContext('2d', { alpha:false });
+  const trailCanvas = document.createElement('canvas');
+  const tctx = trailCanvas.getContext('2d');
+  const bgCanvas = document.createElement('canvas');
+  const bctx = bgCanvas.getContext('2d');
+
+  const genEl = $('gen');
+  const popEl = $('pop');
+  const bestEl = $('best');
+  const scoreEl = $('score');
+  const comboEl = $('combo');
+  const comboBarEl = $('comboBar');
+  const milestoneEl = $('milestone');
+  const startEl = $('start');
+  const playBtn = $('btnPlay');
+  const soundBtn = $('btnSound');
+  const speedEl = $('speed');
+  const speedValEl = $('speedVal');
+  const bestStartEl = $('bestStart');
+
+  const HYPE = ['NICE','GREAT','EXCELLENT','INSANE','GODLIKE','UNREAL'];
+  const DOPA_TEXTS = ['DOPA...','DOPA!'];
+  const HUE_BUCKETS = 24;
+  const PENTA = [0,2,4,7,9,12,14,16,19,21,24,26,28];
+
+  const PATTERNS = [
+    { name:'GLIDER', cells:[[0,1],[1,2],[2,0],[2,1],[2,2]] },
+    { name:'R-PENTOMINO', cells:[[1,0],[2,0],[0,1],[1,1],[1,2]] },
+    { name:'ACORN', cells:[[1,0],[3,1],[0,2],[1,2],[4,2],[5,2],[6,2]] },
+    { name:'LWSS', cells:[[1,0],[4,0],[0,1],[0,2],[4,2],[0,3],[1,3],[2,3],[3,3]] },
+    { name:'DIEHARD', cells:[[6,0],[0,1],[1,1],[1,2],[5,2],[6,2],[7,2]] },
+    { name:'GUN', cells:[
+      [24,0],
+      [22,1],[24,1],
+      [12,2],[13,2],[20,2],[21,2],[34,2],[35,2],
+      [11,3],[15,3],[20,3],[21,3],[34,3],[35,3],
+      [0,4],[1,4],[10,4],[16,4],[20,4],[21,4],
+      [0,5],[1,5],[10,5],[14,5],[16,5],[17,5],[22,5],[24,5],
+      [10,6],[16,6],[24,6],
+      [11,7],[15,7],
+      [12,8],[13,8]
+    ] }
+  ].map(function(p){
+    let w = 0, h = 0;
+    p.cells.forEach(function(c){ if(c[0] > w) w = c[0]; if(c[1] > h) h = c[1]; });
+    p.w = w + 1;
+    p.h = h + 1;
+    return p;
+  });
+
+  let W = 0, H = 0, DPR = 1, cell = 20;
+  let offsetX = 0, offsetY = 0, cols = 0, rows = 0;
+  let cur = null, next = null, cellHue = null;
+  let glowSprites = [], coreColors = [], spriteSize = 0;
+
+  let running = false;
+  let started = false;
+  let speed = 14;
+  let acc = 0;
+  let generation = 0;
+  let population = 0;
+
+  let score = 0;
+  let shownScore = 0;
+  let bestScore = loadBest();
+  let savedBest = bestScore;
+  let combo = 0;
+  let comboMult = 1;
+  let comboPulse = 0;
+  let scoreBump = 0;
+  let nextMilestone = 100000;
+  let hypeIndex = 0;
+  let dopaStep = 0;
+  let celebrateDue = false;
+  let lastCelebrate = -1e9;
+  let quietGens = 0;
+  let seedPauseUntil = 0;
+
+  let shake = 0;
+  let flash = 0;
+  let lastFrame = performance.now();
+  let lastSave = 0;
+  let lastBlip = 0;
+  let soundOn = true;
+
+  let audioReady = false;
+  let ac = null;
+  let master = null;
+  let reverb = null;
+  let noiseBuf = null;
+
+  const sparks = [];
+  const confetti = [];
+  const rings = [];
+  const floats = [];
+  const birthIdx = [];
+
+  let painting = false;
+  let eraseMode = false;
+  let lastCell = null;
+
+  function loadBest(){
+    try {
+      const v = parseInt(localStorage.getItem('dopamine-life-best') || '0', 10);
+      return isNaN(v) ? 0 : v;
+    } catch(e){
+      return 0;
+    }
+  }
+
+  function setPlayButton(){
+    playBtn.textContent = running ? 'PAUSE' : 'PLAY';
+    document.body.classList.toggle('paused', started && !running);
+  }
+
+  function updateSoundButton(){
+    soundBtn.textContent = soundOn ? 'SOUND ON' : 'SOUND OFF';
+    soundBtn.classList.toggle('off', !soundOn);
+  }
+
+  function updateStats(){
+    genEl.textContent = fmt(generation);
+    popEl.textContent = fmt(population);
+  }
+
+  function updateComboUI(){
+    if (combo > 0){
+      comboEl.classList.add('show');
+      const txt = 'COMBO ' + combo + ' · ×' + comboMult;
+      if (comboEl.textContent !== txt) comboEl.textContent = txt;
+      const p = ((combo - 1) % 5 + 1) / 5;
+      comboBarEl.style.width = (p * 100).toFixed(1) + '%';
+    } else {
+      comboEl.classList.remove('show');
+      comboBarEl.style.width = '0%';
+    }
+  }
+
+  function showMilestone(text){
+    milestoneEl.textContent = text;
+    milestoneEl.classList.remove('show');
+    void milestoneEl.offsetWidth;
+    milestoneEl.classList.add('show');
+  }
+
+  function resize(){
+    W = Math.max(320, window.innerWidth);
+    H = Math.max(320, window.innerHeight);
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    trailCanvas.width = canvas.width;
+    trailCanvas.height = canvas.height;
+    tctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    tctx.clearRect(0, 0, W, H);
+
+    cell = Math.round(clamp(Math.min(W, H) / 46, 14, 24));
+    const nc = Math.max(10, Math.floor(W / cell));
+    const nr = Math.max(10, Math.floor(H / cell));
+    offsetX = (W - nc * cell) / 2;
+    offsetY = (H - nr * cell) / 2;
+
+    const oldCur = cur;
+    const oldCols = cols;
+    const oldRows = rows;
+
+    cols = nc;
+    rows = nr;
+    cur = new Uint8Array(cols * rows);
+    next = new Uint8Array(cols * rows);
+
+    if (oldCur){
+      const cw = Math.min(cols, oldCols);
+      const chh = Math.min(rows, oldRows);
+      for (let y = 0; y < chh; y++){
+        for (let x = 0; x < cw; x++){
+          cur[y * cols + x] = oldCur[y * oldCols + x];
+        }
+      }
+      population = 0;
+      for (let i = 0; i < cur.length; i++) population += cur[i];
+    }
+
+    buildHueGrid();
+    buildSprites();
+    buildBackground();
+    updateStats();
+  }
+
+  function buildHueGrid(){
+    cellHue = new Uint8Array(cols * rows);
+    for (let y = 0; y < rows; y++){
+      for (let x = 0; x < cols; x++){
+        const s = Math.sin(x * 0.46 + y * 0.62 + 1.2) * 0.5 + 0.5;
+        cellHue[y * cols + x] = Math.min(HUE_BUCKETS - 1, Math.floor(s * HUE_BUCKETS));
+      }
+    }
+  }
+
+  function hueForBucket(b){
+    return 152 + (b / (HUE_BUCKETS - 1)) * 176;
+  }
+
+  function hueForCell(x, y){
+    return hueForBucket(cellHue[y * cols + x]);
+  }
+
+  function buildSprites(){
+    spriteSize = cell * 3.4;
+    const pxSize = Math.ceil(spriteSize * DPR);
+    glowSprites = [];
+    coreColors = [];
+    for (let b = 0; b < HUE_BUCKETS; b++){
+      const hue = hueForBucket(b);
+      const c = document.createElement('canvas');
+      c.width = pxSize;
+      c.height = pxSize;
+      const g = c.getContext('2d');
+      const scale = pxSize / spriteSize;
+      g.scale(scale, scale);
+      const grd = g.createRadialGradient(spriteSize/2, spriteSize/2, 0, spriteSize/2, spriteSize/2, spriteSize/2);
+      grd.addColorStop(0, 'hsla(' + hue + ',100%,80%,0.95)');
+      grd.addColorStop(0.18, 'hsla(' + hue + ',100%,68%,0.55)');
+      grd.addColorStop(0.46, 'hsla(' + hue + ',100%,58%,0.18)');
+      grd.addColorStop(1, 'hsla(' + hue + ',100%,50%,0)');
+      g.fillStyle = grd;
+      g.fillRect(0, 0, spriteSize, spriteSize);
+      glowSprites.push(c);
+      coreColors.push('hsl(' + hue + ',100%,84%)');
+    }
+  }
+
+  function buildBackground(){
+    bgCanvas.width = canvas.width;
+    bgCanvas.height = canvas.height;
+    bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    bctx.fillStyle = '#04050c';
+    bctx.fillRect(0, 0, W, H);
+
+    let g = bctx.createRadialGradient(W*0.2, H*0.14, 0, W*0.2, H*0.14, Math.max(W,H)*0.72);
+    g.addColorStop(0, 'rgba(24,84,170,0.26)');
+    g.addColorStop(0.45, 'rgba(20,24,90,0.1)');
+    g.addColorStop(1, 'rgba(4,5,12,0)');
+    bctx.fillStyle = g;
+    bctx.fillRect(0, 0, W, H);
+
+    g = bctx.createRadialGradient(W*0.84, H*0.84, 0, W*0.84, H*0.84, Math.max(W,H)*0.62);
+    g.addColorStop(0, 'rgba(126,26,160,0.2)');
+    g.addColorStop(1, 'rgba(4,5,12,0)');
+    bctx.fillStyle = g;
+    bctx.fillRect(0, 0, W, H);
+
+    for (let i = 0; i < 130; i++){
+      const x = Math.random() * W;
+      const y = Math.random() * H;
+      const a = Math.random() * 0.3 + 0.04;
+      bctx.fillStyle = 'rgba(180,215,255,' + a.toFixed(3) + ')';
+      bctx.fillRect(x, y, Math.random() < 0.15 ? 2 : 1, 1);
+    }
+
+    bctx.strokeStyle = 'rgba(110,160,255,0.05)';
+    bctx.lineWidth = 1;
+    bctx.beginPath();
+    for (let x = 0; x <= cols; x++){
+      const px = offsetX + x * cell;
+      bctx.moveTo(px, offsetY);
+      bctx.lineTo(px, offsetY + rows * cell);
+    }
+    for (let y = 0; y <= rows; y++){
+      const py = offsetY + y * cell;
+      bctx.moveTo(offsetX, py);
+      bctx.lineTo(offsetX + cols * cell, py);
+    }
+    bctx.stroke();
+
+    bctx.strokeStyle = 'rgba(90,200,255,0.08)';
+    bctx.strokeRect(offsetX + 0.5, offsetY + 0.5, cols * cell - 1, rows * cell - 1);
+
+    g = bctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.24, W/2, H/2, Math.max(W,H)*0.8);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(0.7, 'rgba(0,0,0,0.22)');
+    g.addColorStop(1, 'rgba(0,0,0,0.7)');
+    bctx.fillStyle = g;
+    bctx.fillRect(0, 0, W, H);
+  }
+
+  function drawCellAt(g, x, y, scale){
+    const b = cellHue[y * cols + x];
+    const px = offsetX + (x + 0.5) * cell;
+    const py = offsetY + (y + 0.5) * cell;
+    g.globalAlpha = Math.min(1, 0.28 * scale);
+    g.drawImage(glowSprites[b], px - spriteSize/2, py - spriteSize/2, spriteSize, spriteSize);
+    g.globalAlpha = 1;
+    g.fillStyle = coreColors[b];
+    g.beginPath();
+    g.arc(px, py, cell * 0.21, 0, TAU);
+    g.fill();
+  }
+
+  function initAudio(){
+    if (ac){
+      if (ac.state === 'suspended') ac.resume();
+      return;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC){ soundOn = false; updateSoundButton(); return; }
+    try {
+      ac = new AC();
+    } catch(e){
+      soundOn = false;
+      updateSoundButton();
+      return;
+    }
+    if (ac.state === 'suspended') ac.resume();
+
+    master = ac.createGain();
+    master.gain.value = 0;
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -16;
+    comp.knee.value = 20;
+    comp.ratio.value = 6;
+    comp.attack.value = 0.004;
+    comp.release.value = 0.22;
+    master.connect(comp);
+    comp.connect(ac.destination);
+    master.gain.setTargetAtTime(soundOn ? 0.6 : 0.0001, ac.currentTime, 0.5);
+
+    const sr = ac.sampleRate;
+    const len = Math.floor(sr * 2.6);
+    const ir = ac.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++){
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++){
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.1);
+      }
+    }
+    reverb = ac.createConvolver();
+    reverb.buffer = ir;
+    const wet = ac.createGain();
+    wet.gain.value = 0.5;
+    reverb.connect(wet);
+    wet.connect(master);
+
+    const nlen = Math.floor(sr * 1.2);
+    noiseBuf = ac.createBuffer(1, nlen, sr);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < nlen; i++) nd[i] = Math.random() * 2 - 1;
+
+    startPad();
+    audioReady = true;
+    updateSoundButton();
+  }
+
+  function startPad(){
+    const bus = ac.createGain();
+    bus.gain.value = 0.05;
+    bus.connect(master);
+    const send = ac.createGain();
+    send.gain.value = 0.35;
+    bus.connect(send);
+    send.connect(reverb);
+
+    const filter = ac.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 330;
+    filter.Q.value = 0.7;
+    filter.connect(bus);
+
+    const freqs = [55, 82.41, 110, 164.81];
+    freqs.forEach(function(f, i){
+      const o = ac.createOscillator();
+      o.type = i === 0 ? 'triangle' : 'sine';
+      o.frequency.value = f;
+      o.detune.value = rand(-9, 9);
+      const g = ac.createGain();
+      g.gain.value = [0.7, 0.28, 0.22, 0.1][i];
+      o.connect(g);
+      g.connect(filter);
+      o.start();
+    });
+
+    const lfo = ac.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.045;
+    const lfoGain = ac.createGain();
+    lfoGain.gain.value = 150;
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+    lfo.start();
+  }
+
+  function playTone(freq, opts){
+    if (!audioReady || !soundOn || !ac) return;
+    opts = opts || {};
+    const vol = opts.vol !== undefined ? opts.vol : 0.1;
+    const dur = opts.dur !== undefined ? opts.dur : 0.5;
+    const type = opts.type || 'triangle';
+    const pan = opts.pan !== undefined ? opts.pan : 0;
+    const delay = opts.delay || 0;
+    const t = ac.currentTime + delay;
+
+    const o = ac.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    o.detune.value = rand(-4, 4);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, vol), t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    let node = g;
+    if (ac.createStereoPanner){
+      const p = ac.createStereoPanner();
+      p.pan.value = clamp(pan, -1, 1);
+      g.connect(p);
+      node = p;
+    }
+    node.connect(master);
+    node.connect(reverb);
+    o.connect(g);
+    o.start(t);
+    o.stop(t + dur + 0.12);
+  }
+
+  function playBirth(xNorm, births){
+    const idx = clamp(Math.floor(xNorm * 7) + Math.min(6, Math.floor(combo / 5)), 0, PENTA.length - 1);
+    const freq = 261.63 * Math.pow(2, PENTA[idx] / 12);
+    const vol = 0.05 + Math.min(0.06, births * 0.002);
+    playTone(freq, { vol: vol, dur: 0.5, type: 'triangle', pan: xNorm * 1.6 - 0.8 });
+    if (Math.random() < 0.22){
+      playTone(freq * 2, { vol: vol * 0.3, dur: 0.4, type: 'sine', pan: xNorm * 1.6 - 0.8, delay: 0.02 });
+    }
+  }
+
+  function playCelebration(){
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51];
+    notes.forEach(function(f, i){
+      playTone(f, { vol: 0.1, dur: 0.7, type: 'triangle', delay: i * 0.075, pan: -0.5 + i * 0.25 });
+    });
+    playTone(130.81, { vol: 0.16, dur: 0.8, type: 'sine' });
+  }
+
+  function playStartChord(){
+    [261.63, 329.63, 392, 523.25].forEach(function(f, i){
+      playTone(f, { vol: 0.1, dur: 1.1, type: 'triangle', delay: i * 0.06, pan: -0.4 + i * 0.27 });
+    });
+    playTone(65.41, { vol: 0.2, dur: 1.4, type: 'sine' });
+  }
+
+  function whoosh(up, vol, dur){
+    if (!audioReady || !soundOn || !ac || !noiseBuf) return;
+    up = up !== false;
+    vol = vol || 0.16;
+    dur = dur || 0.8;
+    const t = ac.currentTime;
+    const src = ac.createBufferSource();
+    src.buffer = noiseBuf;
+    const bp = ac.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(up ? 180 : 2400, t);
+    bp.frequency.exponentialRampToValueAtTime(up ? 3200 : 140, t + dur);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.16);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(master);
+    g.connect(reverb);
+    src.start(t);
+    src.stop(t + dur + 0.05);
+  }
+
+  function playInjection(){
+    playTone(98, { vol: 0.18, dur: 0.8, type: 'sine' });
+    playTone(49, { vol: 0.2, dur: 1.2, type: 'sine' });
+    playTone(783.99, { vol: 0.06, dur: 1.1, type: 'sine', delay: 0.08, pan: 0.3 });
+    whoosh(true, 0.1, 0.5);
+  }
+
+  function toggleSound(){
+    initAudio();
+    soundOn = !soundOn;
+    if (master && ac){
+      master.gain.setTargetAtTime(soundOn ? 0.6 : 0.0001, ac.currentTime, 0.08);
+    }
+    updateSoundButton();
+    if (soundOn) playTone(659.25, { vol: 0.08, dur: 0.25 });
+  }
+
+  function spawnSparks(x, y, hue, count, power){
+    power = power || 1;
+    for (let i = 0; i < count; i++){
+      if (sparks.length > 420) break;
+      const a = rand(0, TAU);
+      const sp = rand(20, 120) * power;
+      const life = rand(0.35, 0.95);
+      sparks.push({
+        x: x, y: y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 14,
+        life: life, max: life,
+        size: rand(0.8, 2.4),
+        hue: hue + rand(-22, 22),
+        drag: rand(2, 5)
+      });
+    }
+  }
+
+  function confettiBurst(x, y, count){
+    const hues = [180, 196, 268, 300, 322, 44, 160, 210];
+    for (let i = 0; i < count; i++){
+      if (confetti.length > 340) break;
+      const a = rand(0, TAU);
+      const sp = rand(90, 540);
+      const life = rand(1.5, 3.1);
+      confetti.push({
+        x: x, y: y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - rand(80, 260),
+        rot: rand(0, TAU),
+        vr: rand(-11, 11),
+        w: rand(3, 8),
+        h: rand(2, 5),
+        hue: hues[(Math.random() * hues.length) | 0] + rand(-12, 12),
+        life: life, max: life,
+        phase: rand(0, TAU)
+      });
+    }
+  }
+
+  function addRing(x, y, hue, maxR, dur){
+    if (rings.length > 18) rings.shift();
+    rings.push({ x:x, y:y, t:0, dur: dur || 0.7, max: maxR || cell * 10, hue: hue });
+  }
+
+  function addFloat(x, y, text, hue, size){
+    floats.push({ x:x, y:y, text:text, hue:hue, size:size || 15, life:1.2, max:1.2, vy:-34 });
+  }
+
+  function updateEffects(dt){
+    for (let i = sparks.length - 1; i >= 0; i--){
+      const p = sparks[i];
+      p.life -= dt;
+      if (p.life <= 0){
+        sparks[i] = sparks[sparks.length - 1];
+        sparks.pop();
+        continue;
+      }
+      const d = Math.exp(-p.drag * dt);
+      p.vx *= d;
+      p.vy = p.vy * d - 10 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+
+    for (let i = confetti.length - 1; i >= 0; i--){
+      const c = confetti[i];
+      c.life -= dt;
+      if (c.life <= 0){
+        confetti[i] = confetti[confetti.length - 1];
+        confetti.pop();
+        continue;
+      }
+      c.vy += 950 * dt;
+      c.vx *= Math.exp(-0.5 * dt);
+      c.x += (c.vx + Math.sin(c.phase + (c.max - c.life) * 7) * 34) * dt;
+      c.y += c.vy * dt;
+      c.rot += c.vr * dt;
+    }
+
+    for (let i = rings.length - 1; i >= 0; i--){
+      const r = rings[i];
+      r.t += dt;
+      if (r.t >= r.dur) rings.splice(i, 1);
+    }
+
+    for (let i = floats.length - 1; i >= 0; i--){
+      const f = floats[i];
+      f.life -= dt;
+      if (f.life <= 0){
+        floats.splice(i, 1);
+        continue;
+      }
+      f.y += f.vy * dt;
+      f.vy *= Math.exp(-1.6 * dt);
+    }
+
+    shake = Math.max(0, shake - (4 + shake * 8) * dt);
+    flash = Math.max(0, flash - dt * 2.8);
+    comboPulse = Math.max(0, comboPulse - dt * 5);
+    scoreBump = Math.max(0, scoreBump - dt * 4.5);
+  }
+
+  function drawSparks(){
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < sparks.length; i++){
+      const p = sparks[i];
+      const a = clamp(p.life / p.max, 0, 1);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = 'hsl(' + p.hue + ' 100% 70%)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * (0.35 + 0.65 * a), 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawRings(){
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < rings.length; i++){
+      const r = rings[i];
+      const p = clamp(r.t / r.dur, 0, 1);
+      const a = (1 - p) * 0.7;
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = 'hsl(' + r.hue + ' 100% 70%)';
+      ctx.lineWidth = 1.6 + (1 - p) * 2.2;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, r.max * p + cell * 0.5, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawFloats(){
+    if (!floats.length) return;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < floats.length; i++){
+      const f = floats[i];
+      const a = clamp(f.life / f.max, 0, 1);
+      ctx.globalAlpha = a;
+      ctx.font = '700 ' + f.size + 'px "Bahnschrift","Segoe UI",sans-serif';
+      ctx.fillStyle = 'hsl(' + f.hue + ' 100% 78%)';
+      ctx.shadowColor = 'hsla(' + f.hue + ',100%,65%,0.9)';
+      ctx.shadowBlur = 16;
+      ctx.fillText(f.text, f.x, f.y);
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  function drawConfetti(){
+    if (!confetti.length) return;
+    for (let i = 0; i < confetti.length; i++){
+      const c = confetti[i];
+      const a = Math.min(1, c.life / 0.6);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rot);
+      ctx.fillStyle = 'hsl(' + c.hue + ' 95% 62%)';
+      ctx.fillRect(-c.w/2, -c.h/2, c.w, c.h);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function simStep(){
+    if (!cur) return;
+    const cW = cols;
+    const cH = rows;
+    const c = cur;
+    const n = next;
+    let births = 0;
+    let pop = 0;
+    birthIdx.length = 0;
+
+    for (let y = 0; y < cH; y++){
+      const row = y * cW;
+      const rowUp = ((y - 1 + cH) % cH) * cW;
+      const rowDn = ((y + 1) % cH) * cW;
+      for (let x = 0; x < cW; x++){
+        const xm = x === 0 ? cW - 1 : x - 1;
+        const xp = x === cW - 1 ? 0 : x + 1;
+        const alive = c[row + x];
+        const cnt = c[rowUp + xm] + c[rowUp + x] + c[rowUp + xp]
+                  + c[row + xm] + c[row + xp]
+                  + c[rowDn + xm] + c[rowDn + x] + c[rowDn + xp];
+        if (alive){
+          if (cnt === 2 || cnt === 3){
+            n[row + x] = 1;
+            pop++;
+          } else {
+            n[row + x] = 0;
+          }
+        } else {
+          if (cnt === 3){
+            n[row + x] = 1;
+            pop++;
+            births++;
+            birthIdx.push(row + x);
+          } else {
+            n[row + x] = 0;
+          }
+        }
+      }
+    }
+
+    const tmp = cur;
+    cur = next;
+    next = tmp;
+
+    generation++;
+    population = pop;
+
+    const heavy = population > 1500;
+    tctx.globalCompositeOperation = 'lighter';
+    for (let y = 0; y < cH; y++){
+      const row = y * cW;
+      for (let x = 0; x < cW; x++){
+        if (cur[row + x] && (!heavy || ((x + y) & 1) === 0)){
+          drawCellAt(tctx, x, y, 1);
+        }
+      }
+    }
+    tctx.globalCompositeOperation = 'source-over';
+    tctx.globalAlpha = 1;
+
+    if (births > 0){
+      const samples = Math.min(birthIdx.length, 26);
+      const stride = birthIdx.length / samples;
+      for (let k = 0; k < samples; k++){
+        const idx = birthIdx[Math.floor(k * stride)];
+        const bx = idx % cW;
+        const by = (idx / cW) | 0;
+        const px = offsetX + (bx + 0.5) * cell;
+        const py = offsetY + (by + 0.5) * cell;
+        spawnSparks(px, py, hueForCell(bx, by), births > 80 ? 1 : 2, 0.9);
+      }
+
+      if (audioReady && soundOn){
+        const now = performance.now();
+        if (now - lastBlip > 58){
+          lastBlip = now;
+          const idx = birthIdx[(Math.random() * birthIdx.length) | 0];
+          playBirth((idx % cW) / Math.max(1, cW - 1), births);
+        }
+      }
+
+      combo = Math.min(combo + 1, 999);
+      comboPulse = 1;
+      quietGens = 0;
+      comboMult = 1 + Math.min(7, Math.floor(combo / 5));
+      score += births * 5 * comboMult;
+      scoreBump = 1;
+      if (score > bestScore){
+        bestScore = score;
+        bestEl.textContent = fmt(bestScore);
+      }
+      if (score >= nextMilestone){
+        nextMilestone = Math.floor(score / 100000) * 100000 + 100000;
+        celebrateDue = true;
+      }
+    } else {
+      if (combo > 0) combo = Math.max(0, combo - 1);
+      comboMult = 1 + Math.min(7, Math.floor(combo / 5));
+      quietGens++;
+    }
+
+    if (celebrateDue && performance.now() - lastCelebrate > 3200){
+      celebrateDue = false;
+      lastCelebrate = performance.now();
+      celebrate();
+    }
+
+    updateStats();
+    updateComboUI();
+
+    if (started && running && performance.now() > seedPauseUntil){
+      if (population < 3){
+        injectRandom();
+      } else if (quietGens > 60 && population < 140){
+        injectRandom();
+      }
+    }
+  }
+
+  function celebrate(){
+    if (combo >= 25){
+      dopaStep++;
+    }
+    if (dopaStep > 0){
+      showMilestone(dopaStep <= 2 ? DOPA_TEXTS[dopaStep - 1] : 'DOPA' + '!'.repeat(dopaStep));
+    } else {
+      showMilestone(HYPE[Math.min(HYPE.length - 1, hypeIndex)]);
+      hypeIndex++;
+    }
+    confettiBurst(W * 0.5, H * 0.46, 110);
+    addRing(W * 0.5, H * 0.5, 195, Math.max(W, H) * 0.6, 1.1);
+    addRing(W * 0.5, H * 0.5, 315, Math.max(W, H) * 0.42, 0.9);
+    shake = Math.max(shake, 17);
+    flash = Math.max(flash, 0.9);
+    playCelebration();
+  }
+
+  function injectRandom(){
+    let p = null;
+    if (cols >= 54 && rows >= 18 && population < 100 && Math.random() < 0.4){
+      p = PATTERNS[PATTERNS.length - 1];
+    }
+    if (!p){
+      const pool = PATTERNS.filter(function(q){
+        return q.name !== 'GUN' && q.w <= cols - 4 && q.h <= rows - 4;
+      });
+      if (!pool.length) return;
+      p = pool[(Math.random() * pool.length) | 0];
+    }
+
+    const maxX = Math.max(1, cols - p.w - 1);
+    const maxY = Math.max(1, rows - p.h - 1);
+    const gx = Math.floor(rand(1, maxX));
+    const gy = Math.floor(rand(1, maxY));
+    const hue = rand(170, 305);
+
+    tctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < p.cells.length; i++){
+      const x = gx + p.cells[i][0];
+      const y = gy + p.cells[i][1];
+      if (x < 0 || y < 0 || x >= cols || y >= rows) continue;
+      cur[y * cols + x] = 1;
+      drawCellAt(tctx, x, y, 2.4);
+    }
+    tctx.globalCompositeOperation = 'source-over';
+    tctx.globalAlpha = 1;
+
+    const cx = offsetX + (gx + p.w / 2) * cell;
+    const cy = offsetY + (gy + p.h / 2) * cell;
+    spawnSparks(cx, cy, hue, 22, 1.5);
+    addRing(cx, cy, hue, cell * 13, 0.8);
+    addFloat(cx, cy - cell * 1.6, p.name, hue, 14);
+    shake = Math.max(shake, 7);
+    flash = Math.max(flash, 0.35);
+    quietGens = 0;
+    playInjection();
+  }
+
+  function randomize(){
+    cur.fill(0);
+    next.fill(0);
+    const density = rand(0.13, 0.19);
+    for (let i = 0; i < cur.length; i++){
+      if (Math.random() < density) cur[i] = 1;
+    }
+    const glider = [[0,1],[1,2],[2,0],[2,1],[2,2]];
+    for (let k = 0; k < 2; k++){
+      const gx = 2 + ((Math.random() * Math.max(1, cols - 9)) | 0);
+      const gy = 2 + ((Math.random() * Math.max(1, rows - 9)) | 0);
+      for (let i = 0; i < glider.length; i++){
+        cur[(gy + glider[i][1]) * cols + gx + glider[i][0]] = 1;
+      }
+    }
+    generation = 0;
+    combo = 0;
+    comboMult = 1;
+    comboPulse = 0;
+    hypeIndex = 0;
+    dopaStep = 0;
+    quietGens = 0;
+    population = 0;
+    for (let i = 0; i < cur.length; i++) population += cur[i];
+    tctx.clearRect(0, 0, W, H);
+    updateStats();
+    updateComboUI();
+  }
+
+  function clearGrid(){
+    cur.fill(0);
+    next.fill(0);
+    generation = 0;
+    population = 0;
+    combo = 0;
+    comboMult = 1;
+    comboPulse = 0;
+    hypeIndex = 0;
+    dopaStep = 0;
+    quietGens = 0;
+    seedPauseUntil = performance.now() + 6000;
+    tctx.clearRect(0, 0, W, H);
+    addRing(offsetX + cols * cell / 2, offsetY + rows * cell / 2, 200, cell * 16, 0.7);
+    updateStats();
+    updateComboUI();
+  }
+
+  function startGame(){
+    if (started) return;
+    started = true;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    initAudio();
+    if (master && ac) master.gain.setTargetAtTime(0.6, ac.currentTime, 0.2);
+    document.body.classList.remove('paused');
+    startEl.classList.add('hidden');
+    randomize();
+    running = true;
+    acc = 0;
+    setPlayButton();
+    flash = 1;
+    shake = 16;
+    confettiBurst(W * 0.5, H * 0.56, 120);
+    addRing(W * 0.5, H * 0.5, 190, Math.max(W, H) * 0.55, 1.2);
+    addRing(W * 0.5, H * 0.5, 300, Math.max(W, H) * 0.38, 0.9);
+    whoosh(true, 0.2, 0.9);
+    playStartChord();
+    showMilestone("LET'S GO");
+    lastFrame = performance.now();
+  }
+
+  function toggleRunning(){
+    if (!started){
+      startGame();
+      return;
+    }
+    running = !running;
+    acc = 0;
+    setPlayButton();
+    playTone(running ? 523.25 : 329.63, { vol: 0.07, dur: 0.3 });
+  }
+
+  function paintCell(x, y){
+    if (!cur || x < 0 || y < 0 || x >= cols || y >= rows) return;
+    const idx = y * cols + x;
+    const px = offsetX + (x + 0.5) * cell;
+    const py = offsetY + (y + 0.5) * cell;
+
+    if (eraseMode){
+      if (!cur[idx]) return;
+      cur[idx] = 0;
+      next[idx] = 0;
+      population = Math.max(0, population - 1);
+      tctx.globalCompositeOperation = 'destination-out';
+      tctx.globalAlpha = 1;
+      tctx.beginPath();
+      tctx.arc(px, py, cell * 0.9, 0, TAU);
+      tctx.fill();
+      tctx.globalCompositeOperation = 'source-over';
+      spawnSparks(px, py, 210, 2, 0.5);
+    } else {
+      if (cur[idx]) return;
+      cur[idx] = 1;
+      next[idx] = 1;
+      population++;
+      tctx.globalCompositeOperation = 'lighter';
+      drawCellAt(tctx, x, y, 2.2);
+      tctx.globalCompositeOperation = 'source-over';
+      tctx.globalAlpha = 1;
+      spawnSparks(px, py, hueForCell(x, y), 3, 1.1);
+      const now = performance.now();
+      if (now - lastBlip > 70){
+        lastBlip = now;
+        playBirth(x / Math.max(1, cols - 1), 4);
+      }
+    }
+    updateStats();
+  }
+
+  function paintAt(clientX, clientY){
+    const x = Math.floor((clientX - offsetX) / cell);
+    const y = Math.floor((clientY - offsetY) / cell);
+    if (x < 0 || y < 0 || x >= cols || y >= rows){
+      lastCell = null;
+      return;
+    }
+    if (lastCell){
+      const lx = lastCell[0];
+      const ly = lastCell[1];
+      const dx = x - lx;
+      const dy = y - ly;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy));
+      if (steps > 0){
+        for (let i = 1; i <= steps; i++){
+          paintCell(Math.round(lx + dx * i / steps), Math.round(ly + dy * i / steps));
+        }
+      }
+    } else {
+      paintCell(x, y);
+    }
+    lastCell = [x, y];
+  }
+
+  function updateScoreUI(dt){
+    if (shownScore !== score){
+      const diff = score - shownScore;
+      if (Math.abs(diff) < 1){
+        shownScore = score;
+      } else {
+        shownScore += diff * Math.min(1, dt * 14);
+      }
+      scoreEl.textContent = fmt(shownScore);
+    }
+    scoreEl.style.transform = 'scale(' + (1 + scoreBump * 0.065).toFixed(3) + ')';
+    comboEl.style.transform = 'scale(' + (1 + comboPulse * 0.16).toFixed(3) + ')';
+
+    if (bestScore > savedBest && performance.now() - lastSave > 1200){
+      savedBest = bestScore;
+      lastSave = performance.now();
+      try { localStorage.setItem('dopamine-life-best', String(bestScore)); } catch(e){}
+    }
+  }
+
+  function frame(now){
+    requestAnimationFrame(frame);
+
+    let dt = (now - lastFrame) / 1000;
+    lastFrame = now;
+    if (!(dt > 0)) dt = 1 / 60;
+    dt = Math.min(dt, 0.05);
+
+    if (running && started){
+      acc += dt;
+      const interval = 1 / speed;
+      let steps = 0;
+      while (acc >= interval && steps < 4){
+        simStep();
+        acc -= interval;
+        steps++;
+      }
+      if (steps === 4) acc = 0;
+    }
+
+    updateEffects(dt);
+
+    tctx.globalCompositeOperation = 'destination-out';
+    tctx.fillStyle = 'rgba(0,0,0,' + Math.min(0.2, 0.06 * dt * 60).toFixed(4) + ')';
+    tctx.fillRect(0, 0, W, H);
+    tctx.globalCompositeOperation = 'source-over';
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(bgCanvas, 0, 0);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    const sx = (Math.random() * 2 - 1) * shake;
+    const sy = (Math.random() * 2 - 1) * shake;
+
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.drawImage(trailCanvas, 0, 0, W, H);
+    ctx.globalAlpha = 1;
+
+    if (!running && started && cur){
+      for (let y = 0; y < rows; y++){
+        const row = y * cols;
+        for (let x = 0; x < cols; x++){
+          if (cur[row + x]) drawCellAt(ctx, x, y, 0.9);
+        }
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+
+    drawSparks();
+    drawRings();
+    drawFloats();
+    drawConfetti();
+    ctx.restore();
+
+    if (flash > 0.002){
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(215,245,255,' + (flash * 0.07).toFixed(4) + ')';
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    updateScoreUI(dt);
+  }
+
+  function setupInput(){
+    let resizeTimer = 0;
+    window.addEventListener('resize', function(){
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(resize, 120);
+    });
+
+    startEl.addEventListener('pointerdown', function(){
+      startGame();
+    });
+
+    playBtn.addEventListener('click', function(){
+      toggleRunning();
+      playBtn.blur();
+    });
+
+    $('btnRandom').addEventListener('click', function(){
+      if (!started) return;
+      randomize();
+      whoosh(true, 0.13, 0.5);
+      flash = Math.max(flash, 0.7);
+      shake = Math.max(shake, 9);
+      addRing(W * 0.5, H * 0.5, 190, Math.max(W, H) * 0.5, 0.9);
+      playTone(392, { vol: 0.08, dur: 0.4, type: 'triangle' });
+      this.blur();
+    });
+
+    $('btnClear').addEventListener('click', function(){
+      if (!started) return;
+      clearGrid();
+      whoosh(false, 0.11, 0.4);
+      showMilestone('CLEAR');
+      this.blur();
+    });
+
+    soundBtn.addEventListener('click', function(){
+      toggleSound();
+      soundBtn.blur();
+    });
+
+    speedEl.addEventListener('input', function(){
+      speed = parseInt(speedEl.value, 10) || 14;
+      speedValEl.textContent = String(speed);
+    });
+
+    canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+    canvas.addEventListener('pointerdown', function(e){
+      if (!started) return;
+      painting = true;
+      eraseMode = e.button === 2 || e.shiftKey || e.altKey;
+      lastCell = null;
+      paintAt(e.clientX, e.clientY);
+      try { canvas.setPointerCapture(e.pointerId); } catch(err){}
+    });
+
+    canvas.addEventListener('pointermove', function(e){
+      if (!painting) return;
+      paintAt(e.clientX, e.clientY);
+    });
+
+    function endPaint(){
+      painting = false;
+      eraseMode = false;
+      lastCell = null;
+    }
+    canvas.addEventListener('pointerup', endPaint);
+    canvas.addEventListener('pointercancel', endPaint);
+    window.addEventListener('blur', endPaint);
+    window.addEventListener('pointerup', function(){
+      painting = false;
+      lastCell = null;
+    });
+
+    window.addEventListener('keydown', function(e){
+      const tag = e.target && e.target.tagName;
+      if (tag === 'INPUT') return;
+      if (!started){
+        if (e.code === 'Space' || e.code === 'Enter'){
+          e.preventDefault();
+          startGame();
+        }
+        return;
+      }
+      if (e.code === 'Space'){
+        e.preventDefault();
+        toggleRunning();
+      } else if (e.key === 'r' || e.key === 'R'){
+        randomize();
+        whoosh(true, 0.12, 0.5);
+        addRing(W * 0.5, H * 0.5, 190, Math.max(W, H) * 0.5, 0.9);
+      } else if (e.key === 'c' || e.key === 'C'){
+        clearGrid();
+        whoosh(false, 0.1, 0.4);
+      } else if (e.key === 's' || e.key === 'S'){
+        toggleSound();
+      }
+    });
+  }
+
+  function init(){
+    resize();
+    bestEl.textContent = fmt(bestScore);
+    bestStartEl.textContent = fmt(bestScore);
+    speedEl.value = String(speed);
+    speedValEl.textContent = String(speed);
+    updateSoundButton();
+    updateComboUI();
+    setPlayButton();
+    setupInput();
+    requestAnimationFrame(frame);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
